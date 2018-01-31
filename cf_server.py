@@ -1,9 +1,4 @@
 # -*- coding: utf-8 -*-
-'''
-Created on 2014-10-23
-
-@author: Wei shun
-'''
 
 from twisted.internet import reactor, threads
 from twisted.python import threadable
