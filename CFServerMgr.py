@@ -1,9 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
-Created on 2014-6-12
 
-@author: Wei shun
-'''
 import threading
 from twisted.internet import threads
 import xmlrpclib
