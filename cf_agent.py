@@ -1,9 +1,4 @@
 # -*- coding: utf-8 -*-
-'''
-Created on 2014-6-12
-
-@author: Wei shun
-'''
 
 from CFAgentMgr import *
 from twisted.internet import reactor, threads
