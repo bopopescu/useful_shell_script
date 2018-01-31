@@ -1,8 +1,3 @@
-'''
-Created on 2014-09-18
-
-@author: Wei shun
-'''
 
 import telnetlib
 
