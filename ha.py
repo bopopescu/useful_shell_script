@@ -50,7 +50,7 @@ class HAService:
       self.heartbeat_ip = self.cfg.get('LOCAL', 'heartbeat_ip')
    
       #For SLAVE node only
-      self.master_ip = ''
+      self.main_ip = ''
 
       #For MASTER, this would be a list of dict, 
       #For SLAVE,this would be a list of str(ip)
@@ -59,10 +59,10 @@ class HAService:
       print 'This is %s node......' % (self.role, )
 
       if self.role == 'MASTER':
-	 self._init_master()
+	 self._init_main()
 
       elif self.role == 'SLAVE':
-	 self._init_slave()
+	 self._init_subordinate()
 
       elif self.role == 'STANDBY':
 	 self._init_standby()
@@ -72,7 +72,7 @@ class HAService:
 	 sys.exit(1)
 
 
-  def _init_master(self): 
+  def _init_main(self): 
 
       del self.node_list[:]
 
@@ -101,17 +101,17 @@ class HAService:
       self.broadcast_cluster_info()
 
 
-  def _init_slave(self): 
+  def _init_subordinate(self): 
 
       del self.node_list[:]
 
-      self.master_ip = self.cfg.get('LOCAL', 'master_ip')
+      self.main_ip = self.cfg.get('LOCAL', 'main_ip')
 
-      if self.master_ip != '':
+      if self.main_ip != '':
       
 	 try:
 
-	     xmlrpcObj = xmlrpclib.ServerProxy('http://'+self.master_ip \
+	     xmlrpcObj = xmlrpclib.ServerProxy('http://'+self.main_ip \
 					       + ':6666',allow_none=True)
 	     node_list = xmlrpcObj.sync_cluster_info()
 
@@ -136,7 +136,7 @@ class HAService:
 	     print e 
 	     print except_line_info() 
 	 
-	     syslog.syslog(syslog.LOG_ERR, 'ccp Slave: %s '%(str(e),))
+	     syslog.syslog(syslog.LOG_ERR, 'ccp Subordinate: %s '%(str(e),))
 	     syslog.syslog(syslog.LOG_ERR, except_line_info())
 
 
@@ -144,13 +144,13 @@ class HAService:
 
       del self.node_list[:]
 
-      self.master_ip = self.cfg.get('LOCAL', 'master_ip')
+      self.main_ip = self.cfg.get('LOCAL', 'main_ip')
 
-      if self.master_ip != '':
+      if self.main_ip != '':
       
 	 try:
 
-	     xmlrpcObj = xmlrpclib.ServerProxy('http://'+self.master_ip \
+	     xmlrpcObj = xmlrpclib.ServerProxy('http://'+self.main_ip \
 					       + ':6666',allow_none=True)
 	     node_list = xmlrpcObj.sync_cluster_info()
 
@@ -182,7 +182,7 @@ class HAService:
 	     print e 
 	     print except_line_info() 
 	 
-	     syslog.syslog(syslog.LOG_ERR, 'ccp Slave: %s '%(str(e),))
+	     syslog.syslog(syslog.LOG_ERR, 'ccp Subordinate: %s '%(str(e),))
 	     syslog.syslog(syslog.LOG_ERR, except_line_info())
 
 
@@ -195,11 +195,11 @@ class HAService:
   def broadcast_cluster_info(self):
       '''Internal method for MASTER'''
 
-      slave_info_list = []
+      subordinate_info_list = []
 
       for node_info in self.node_list:
 	  if node_info['role_type'] == 'SLAVE':
-	     slave_info_list.append(node_info)
+	     subordinate_info_list.append(node_info)
 
       for node in self.node_list:
 
@@ -209,15 +209,15 @@ class HAService:
 
 		  xmlrpcObj = xmlrpclib.ServerProxy('http://'+node['heartbeat_ip']\
 							+ ':6666', allow_none=True)
-		  xmlrpcObj.set_master_ip(self.heartbeat_ip)
-		  xmlrpcObj.add_nodes(slave_info_list)
+		  xmlrpcObj.set_main_ip(self.heartbeat_ip)
+		  xmlrpcObj.add_nodes(subordinate_info_list)
 
 	      except Exception, e:
 		     
 		  print e 
 		  print except_line_info() 
 
-		  syslog.syslog(syslog.LOG_ERR, 'ccp Master: %s '%(str(e),))
+		  syslog.syslog(syslog.LOG_ERR, 'ccp Main: %s '%(str(e),))
 		  syslog.syslog(syslog.LOG_ERR, except_line_info())
 	  
 
@@ -261,7 +261,7 @@ class HAService:
 	      print e 
 	      print except_line_info() 
 
-	      syslog.syslog(syslog.LOG_ERR, 'ccp Master: %s'%(str(e),))
+	      syslog.syslog(syslog.LOG_ERR, 'ccp Main: %s'%(str(e),))
 	      syslog.syslog(syslog.LOG_ERR, except_line_info())
 
       #Don't write these to config file
@@ -272,30 +272,30 @@ class HAService:
   def sync_cluster_info(self):
       '''MASTER RPC method, called by SLAVE and STANDBY'''
 
-      slave_info_list = []
+      subordinate_info_list = []
 
       for node in self.node_list:
 
 	  if node['role_type'] == 'STANDBY':
 	     continue
 
-	  slave_info_list.append(node)
+	  subordinate_info_list.append(node)
    
-      return slave_info_list
+      return subordinate_info_list
 
 
-  def set_master_ip(self, heartbeat_ip):
+  def set_main_ip(self, heartbeat_ip):
       '''SLAVE RPC method, called by MASTER'''
 
       g_lock.acquire()
       del self.node_list[:]
       g_lock.release()
 
-      self.master_ip = heartbeat_ip
+      self.main_ip = heartbeat_ip
 
       self.cfg.set('LOCAL', 
-		   'master_ip', 
-		    self.master_ip)
+		   'main_ip', 
+		    self.main_ip)
 
       try:
 	 
@@ -308,7 +308,7 @@ class HAService:
 	  print e 
 	  print except_line_info() 
 
-	  syslog.syslog(syslog.LOG_ERR, 'ccp Slave: %s'%(str(e),))
+	  syslog.syslog(syslog.LOG_ERR, 'ccp Subordinate: %s'%(str(e),))
 	  syslog.syslog(syslog.LOG_ERR, except_line_info())
 
 
@@ -397,19 +397,19 @@ class HAService:
 		     ret = os.system('virsh create /vm/etc/%s'%(f,))
 		     if ret != 0:
 			print 'Failed to start VM with config file: %s' % (f,)
-			syslog.syslog(syslog.LOG_ERR, 'ccp Master: Failed to start\
+			syslog.syslog(syslog.LOG_ERR, 'ccp Main: Failed to start\
 						       VM with configuration file:\
 						      '%(f,))
 		     else: 
 			print 'Start VM with config file: %s' % (f,)
-			syslog.syslog(syslog.LOG_INFO, 'ccp Master: start VM with'+\
+			syslog.syslog(syslog.LOG_INFO, 'ccp Main: start VM with'+\
 						       'configuration file:%s'%(f,))
 		 except Exception, e:
 		     
 		     print e
 		     print except_line_info() 
 		   
-		     syslog.syslog(syslog.LOG_ERR, 'ccp Master: %s'%(str(e),))
+		     syslog.syslog(syslog.LOG_ERR, 'ccp Main: %s'%(str(e),))
 		     syslog.syslog(syslog.LOG_ERR, except_line_info())
 
 
@@ -425,7 +425,7 @@ class HAService:
 	  self.cfg.write(f)
 	  f.close()
 
-	  self._init_slave()
+	  self._init_subordinate()
 
       except Exception, e:
 			       
@@ -436,7 +436,7 @@ class HAService:
 	  syslog.syslog(syslog.LOG_ERR, except_line_info())
 
 
-  def master_periodic_task(self):
+  def main_periodic_task(self):
 
      #Select a node to fence against 
      for node in self.node_list:
@@ -470,14 +470,14 @@ class HAService:
 	 ret = self.poweroff_node(node)
 	 if ret:
 	    print 'Failed to power off node: %s ' % (node['heartbeat_ip'], ) 
-	    syslog.syslog(syslog.LOG_ERR, 'ccp Master: Failed to power off'\
+	    syslog.syslog(syslog.LOG_ERR, 'ccp Main: Failed to power off'\
 					   +' node: ' + node['heartbeat_ip'])
 
 	    #break
 
 	 else:
 	    print 'Power off node: %s' % (node['heartbeat_ip'],)
-	    syslog.syslog(syslog.LOG_INFO, 'ccp Master: Power off node: '+ 
+	    syslog.syslog(syslog.LOG_INFO, 'ccp Main: Power off node: '+ 
 						     node['heartbeat_ip'])
 	 
 	 standby_nodes = []
@@ -518,7 +518,7 @@ class HAService:
 		    print e 
 		    print except_line_info() 
 
-		    syslog.syslog(syslog.LOG_ERR, 'ccp Master: %s'%(str(e),))
+		    syslog.syslog(syslog.LOG_ERR, 'ccp Main: %s'%(str(e),))
 		    syslog.syslog(syslog.LOG_ERR, except_line_info())
 
 		    #Try another standby node
@@ -529,9 +529,9 @@ class HAService:
 	    syslog.syslog(syslog.LOG_INFO, 'No standby node available')
 
 
-  def slave_periodic_task(self):
+  def subordinate_periodic_task(self):
 
-     if self.master_ip == '':
+     if self.main_ip == '':
 	return
 
      g_lock.acquire()
@@ -551,7 +551,7 @@ class HAService:
 	 #Send connection status to MASTER node
 	 try:
 
-	     xmlrpcObj = xmlrpclib.ServerProxy('http://' + self.master_ip\
+	     xmlrpcObj = xmlrpclib.ServerProxy('http://' + self.main_ip\
 						+':6666', allow_none=True)
 	     xmlrpcObj.reachable_notice(node_ip, bReach)
 
@@ -560,7 +560,7 @@ class HAService:
 	     print e 
 	     print except_line_info() 
 
-	     syslog.syslog(syslog.LOG_ERR, 'ccp Slave: %s ' % (str(e), ) )
+	     syslog.syslog(syslog.LOG_ERR, 'ccp Subordinate: %s ' % (str(e), ) )
 	     syslog.syslog(syslog.LOG_ERR, except_line_info())
      
      g_lock.release()
@@ -612,7 +612,7 @@ class HAService:
 	    time.sleep(float(self.heartbeat_interval))
 
 	    if self.role == 'MASTER':    
-	       self.master_periodic_task()
+	       self.main_periodic_task()
 
 	       if loop_times % 5 == 0:
 		   #Broadcast periodically, so SLAVE would get the latest 
@@ -620,7 +620,7 @@ class HAService:
 		   self.broadcast_cluster_info()
 		    
 	    elif self.role == 'SLAVE':
-		 self.slave_periodic_task()
+		 self.subordinate_periodic_task()
 
 	    elif self.role == 'STANDBY':
 		 self.standby_periodic_task()
@@ -689,7 +689,7 @@ if __name__ == '__main__':
      server.register_function(hasrv.add_nodes, 'add_nodes')
      server.register_function(hasrv.take_over, 'take_over')
      server.register_function(hasrv.join_cluster, 'join_cluster')
-     server.register_function(hasrv.set_master_ip, 'set_master_ip')
+     server.register_function(hasrv.set_main_ip, 'set_main_ip')
      server.register_function(hasrv.reachable_notice, 'reachable_notice')
      server.register_function(hasrv.sync_cluster_info, 'sync_cluster_info')
 

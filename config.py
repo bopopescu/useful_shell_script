@@ -13,10 +13,10 @@ install_network_config = {
 }
 
 class server_level:
-      XENSERVER_MASTER = 'master'
-      XENSERVER_SLAVE  = 'slave'
-      VSPHERE_MASTER   = 'master'
-      VSPHERE_SLAVE    = 'slave'
+      XENSERVER_MASTER = 'main'
+      XENSERVER_SLAVE  = 'subordinate'
+      VSPHERE_MASTER   = 'main'
+      VSPHERE_SLAVE    = 'subordinate'
 
 class server_status:
       INITIAL   = 'initial'
